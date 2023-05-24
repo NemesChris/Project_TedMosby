@@ -1,19 +1,30 @@
 import mediapipe as mp
 import cv2
-import numpy as np
-import uuid
-import os
 import pyautogui
+import pygetwindow
+import time
 
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 
 webcam = cv2.VideoCapture(0)
 
-x1 = 0
-x2 = 0
-y1 = 0
-y2 = 0
+mutatoX = 0
+huvelykX = 0
+kozepsoX = 0
+mutatoY = 0
+huvelykY = 0
+kozepsoY = 0
+
+
+screenX, screenY = pyautogui.size()
+cv2font = cv2.FONT_HERSHEY_SIMPLEX
+fontScale = 1
+fontColor = (255, 0, 0)
+fontThickness = 2
+
+windows = pygetwindow.getAllWindows()
+print(windows)
 
 with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, max_num_hands=1) as hands:
     while webcam.isOpened():
@@ -43,11 +54,11 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, m
 
         if detected_hands:
             for hand in detected_hands:
-                mp_drawing.draw_landmarks(image, 
-                    hand, 
+                mp_drawing.draw_landmarks(image,
+                    hand,
                     mp_hands.HAND_CONNECTIONS,
                     bump_setup,
-                    line_setup,                    
+                    line_setup,
                 )
                 landmarks = hand.landmark
 
@@ -59,36 +70,55 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, m
                     if id == 8:
                         cv2.circle(
                             img=image, 
-                            center=(x,y),
+                            center=(x, y),
                             radius=8,
-                            color=(240,0,0),
+                            color=(240, 0, 0),
                             thickness=8,
                         )
-                        x1 = x
-                        y1 = y
+                        mutatoX = x
+                        mutatoY = y
                     # Hüvelykujj
                     if id == 4:
                         cv2.circle(
-                            img=image, 
-                            center=(x,y),
+                            img=image,
+                            center=(x, y),
                             radius=8,
-                            color=(0,0,240),
+                            color=(0, 0, 240),
                             thickness=8,
                         )
-                        x2 = x
-                        y2 = y
+                        huvelykX = x
+                        huvelykY = y
+                    # Kozepsoujj
+                    if id == 12:
+                        cv2.circle(
+                            img=image,
+                            center=(x, y),
+                            radius=8,
+                            color=(0, 0, 240),
+                            thickness=8,
+                        )
+                        kozepsoX = x
+                        kozepsoY = y
                     
-            distance = ((x2-x1)**2 + (y2-y1)**2)**(0.5)//4
+            volume_distance = ((huvelykX-mutatoX)**2 + (huvelykY-mutatoY)**2)**(0.5)//4
 
-            cv2.line(image, (x1, y1), (x2, y2), color=(0,250,0),thickness=5)
-            if distance > 65:
-                pyautogui.press("volumeup")
-            if distance < 10:
-                pyautogui.press("volumedown")
+            middle_distance = ((huvelykX-kozepsoX)**2 + (huvelykY-kozepsoY)**2)**(0.5)//4
 
-                    
-                    # print(results.multi_hand_landmarks)
+            # vonal a hangerőcsík mutatására
+            cv2.line(image, (mutatoX, mutatoY), (huvelykX, huvelykY), color=(0, 250, 0), thickness=5)
+            # vonal a középső gombhoz
+            cv2.line(image, (kozepsoX, kozepsoY), (huvelykX, huvelykY), color=(0, 250, 250), thickness=5)
 
+            # hangerőtávolság kiírása
+            org = (mutatoX+20, mutatoY)
+            if volume_distance:
+                cv2.putText(image, str(volume_distance), org, cv2font, fontScale, fontColor, fontThickness, cv2.LINE_AA)
+                # hangerőszabályzás
+                if volume_distance > 65:
+                    pyautogui.press("volumeup")
+                if volume_distance < 10:
+                    pyautogui.press("volumedown")
+                        # print(results.multi_hand_landmarks)
 
         cv2.imshow("Hand tracking", image)
 
@@ -98,3 +128,11 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, m
     cv2.destroyAllWindows()
 
 
+
+
+
+#pyautogui.moveTo(sreenX/2, screenY/2, 2)   # moves mouse to X of 100, Y of 200 over 2 seconds
+
+# pyautogui.doubleClick()  # perform a left-button double click
+
+# pyautogui.click(button='right', clicks=3, interval=0.25)  ## triple-click the right mouse button with a quarter second pause in between clicks
