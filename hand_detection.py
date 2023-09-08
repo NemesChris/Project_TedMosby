@@ -21,7 +21,11 @@ mutatoY = 0
 huvelykY = 0
 kozepsoY = 0
 
-screenX, screenY = pyautogui.size()
+mouse_x = 500
+mouse_y = 500
+
+click_timer = 0
+
 cv2font = cv2.FONT_HERSHEY_SIMPLEX
 fontScale = 1
 fontColor = (255, 0, 0)
@@ -62,12 +66,18 @@ print('')
 
 windows = pygetwindow.getAllWindows()
 print("FOUND WINDOWS:")
-available_windows = []
+the_mosby_window = None
 for window in windows:
-    if 'Mozilla Firefox' in str(window.title):
-        available_windows.append(window)
-        print(window)
-        print('')
+    print(window)
+    if 'FilmVilág' in str(window.title):
+        print('This will be the Mosby Window!')
+        the_mosby_window = window
+        mouse_x = the_mosby_window.centerx
+        mouse_y = the_mosby_window.centery
+        # center the mouse to Mosby Window
+        pyautogui.moveTo(mouse_x, mouse_y, 1)   # moves mouse to X of 100, Y of 200 over 2 seconds
+
+    print('')
 print('')
 
 print("CAMERA OPENED?")
@@ -79,9 +89,8 @@ with mp_hands.Hands(
     min_tracking_confidence=0.5,
     max_num_hands=max_number_of_hands,
 ) as hands:
-    while webcam.isOpened():
+    while webcam.isOpened() and the_mosby_window:
         ret, frame = webcam.read()
-
         invert_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = cv2.flip(invert_image, 1)
         height, width, _ = image.shape
@@ -99,6 +108,19 @@ with mp_hands.Hands(
             (0, 255, 0),
             2,
         )
+        # SHOW CLICK TIME
+        click_timer += 1
+        cv2.putText(
+            image,
+            f'CLICK:{int(click_timer)}',
+            (20, 370),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 200),
+            2,
+        )
+        if click_timer > 1000:
+            click_timer = 0
 
         image.flags.writeable = False
         results = hands.process(image)
@@ -192,11 +214,23 @@ with mp_hands.Hands(
                     cv2.LINE_AA,
                 )
 
-                volume_distance = (
+                pointer_distance = (
                     (huvelykX-mutatoX)**2 + (huvelykY-mutatoY)**2
                 )**(0.5)//4
-                if volume_distance:
-                    # HANGERŐ ÁLLÍTÁSA
+                # HANGERŐ ÁLLÍTÁSA
+                if pointer_distance:
+                    # hangerőtávolság
+                    org = (mutatoX + 20, mutatoY)
+                    cv2.putText(
+                        image,
+                        str(pointer_distance),
+                        org,
+                        cv2font,
+                        fontScale,
+                        fontColor,
+                        fontThickness,
+                        cv2.LINE_AA,
+                    )
                     if middle_distance > 30:
                         # vonal a hangerőcsík mutatására ZÖLD - változtatható
                         cv2.line(
@@ -206,25 +240,18 @@ with mp_hands.Hands(
                             color=(0, 250, 0),
                             thickness=5,
                         )
-                        org = (mutatoX+20, mutatoY)
-                        # hangerőtávolság
-                        cv2.putText(
-                            image,
-                            str(volume_distance),
-                            org,
-                            cv2font,
-                            fontScale,
-                            fontColor,
-                            fontThickness,
-                            cv2.LINE_AA,
-                        )
+
                         # hangerőszabályzás
-                        if volume_distance > increase_volume_distance:
+                        if pointer_distance > increase_volume_distance:
                             pyautogui.press("volumeup")
-                        if volume_distance < decrease_volume_distance:
+                        if pointer_distance < decrease_volume_distance:
                             pyautogui.press("volumedown")
                     else:
                         # EGÉR VEZÉRLÉSE
+                        # kattintás egyszer
+                        if pointer_distance < 5 and click_timer > 60:
+                            pyautogui.click()
+                            click_timer = 0
                         # vonal a hangerőcsík mutatására KÉK - nem fog változni
                         cv2.line(
                             image,
@@ -234,20 +261,9 @@ with mp_hands.Hands(
                             thickness=5,
                         )
                         org = (mutatoX+20, mutatoY)
-                        # hangerőtávolság
-                        cv2.putText(
-                            image,
-                            str(volume_distance),
-                            org,
-                            cv2font,
-                            fontScale,
-                            fontColor,
-                            fontThickness,
-                            cv2.LINE_AA,
-                        )
 
-        cv2.imshow("Hand tracking", image)
 
+        cv2.imshow("Project Ted Mosby", image)
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
     webcam.release()
