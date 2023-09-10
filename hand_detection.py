@@ -27,7 +27,7 @@ mouse_y = 500
 click_timer = 0
 
 cv2font = cv2.FONT_HERSHEY_SIMPLEX
-fontScale = 1
+fontScale = 0.7
 fontColor = (255, 0, 0)
 fontThickness = 2
 
@@ -188,7 +188,8 @@ with mp_hands.Hands(
                         kozepsoX = x
                         kozepsoY = y
 
-            middle_distance = ((huvelykY-kozepsoY)**2)**(0.5)//4
+            middle_Y_distance = ((huvelykY-kozepsoY)**2)**(0.5)//4
+            middle_X_distance = ((huvelykX-kozepsoX)**2)**(0.5)//4
 
             # vonal a középső gombhoz
             cv2.line(
@@ -201,11 +202,11 @@ with mp_hands.Hands(
 
             # középsőujjtávolság kiírása
             org = (kozepsoX+20, kozepsoY)
-            if middle_distance:
+            if middle_Y_distance:
                 # középsőujj távolság
                 cv2.putText(
                     image,
-                    str(middle_distance),
+                    "Y: " + str(middle_Y_distance) + ', X: ' + str(middle_X_distance),
                     org,
                     cv2font,
                     fontScale,
@@ -214,16 +215,15 @@ with mp_hands.Hands(
                     cv2.LINE_AA,
                 )
 
-                pointer_distance = (
-                    (huvelykX-mutatoX)**2 + (huvelykY-mutatoY)**2
-                )**(0.5)//4
+                pointer_Y_distance = ((huvelykY - mutatoY)**2)**(0.5)//4
+                pointer_X_distance = ((huvelykX - mutatoX)**2)**(0.5)//4
                 # HANGERŐ ÁLLÍTÁSA
-                if pointer_distance:
+                if pointer_Y_distance:
                     # hangerőtávolság
                     org = (mutatoX + 20, mutatoY)
                     cv2.putText(
                         image,
-                        str(pointer_distance),
+                        "Y: " + str(pointer_Y_distance) + ', X: ' + str(pointer_X_distance),
                         org,
                         cv2font,
                         fontScale,
@@ -231,36 +231,38 @@ with mp_hands.Hands(
                         fontThickness,
                         cv2.LINE_AA,
                     )
-                    if middle_distance > 30:
-                        # vonal a hangerőcsík mutatására ZÖLD - változtatható
-                        cv2.line(
-                            image,
-                            (mutatoX, mutatoY),
-                            (huvelykX, huvelykY),
-                            color=(0, 250, 0),
-                            thickness=5,
-                        )
+                    if middle_X_distance < 15:
+                        if middle_Y_distance > 30:
+                            # vonal a hangerőcsík mutatására ZÖLD - változtatható
+                            cv2.line(
+                                image,
+                                (mutatoX, mutatoY),
+                                (huvelykX, huvelykY),
+                                color=(0, 250, 0),
+                                thickness=5,
+                            )
 
-                        # hangerőszabályzás
-                        if pointer_distance > increase_volume_distance:
-                            pyautogui.press("volumeup")
-                        if pointer_distance < decrease_volume_distance:
-                            pyautogui.press("volumedown")
-                    else:
-                        # EGÉR VEZÉRLÉSE
-                        # kattintás egyszer
-                        if pointer_distance < 5 and click_timer > 60:
-                            pyautogui.click()
-                            click_timer = 0
-                        # vonal a hangerőcsík mutatására KÉK - nem fog változni
-                        cv2.line(
-                            image,
-                            (mutatoX, mutatoY),
-                            (huvelykX, huvelykY),
-                            color=(0, 0, 250),
-                            thickness=5,
-                        )
-                        org = (mutatoX+20, mutatoY)
+                            # hangerőszabályzás
+                            if pointer_X_distance < 10:
+                                if pointer_Y_distance > increase_volume_distance:
+                                    pyautogui.press("volumeup")
+                                if pointer_Y_distance < decrease_volume_distance:
+                                    pyautogui.press("volumedown")
+                        else:
+                            # EGÉR VEZÉRLÉSE
+                            # kattintás egyszer
+                            if pointer_Y_distance < 5 and click_timer > 60:
+                                pyautogui.click()
+                                click_timer = 0
+                            # vonal a hangerőcsík mutatására KÉK - nem fog változni
+                            cv2.line(
+                                image,
+                                (mutatoX, mutatoY),
+                                (huvelykX, huvelykY),
+                                color=(0, 0, 250),
+                                thickness=5,
+                            )
+                            org = (mutatoX+20, mutatoY)
 
 
         cv2.imshow("Project Ted Mosby", image)
