@@ -5,7 +5,7 @@ import pygetwindow
 import time
 
 # from ini file
-selected_webcam = 1
+selected_webcam = 0
 max_number_of_hands = 1
 increase_volume_distance = 65
 decrease_volume_distance = 15
@@ -20,6 +20,8 @@ kozepsoX = 0
 mutatoY = 0
 huvelykY = 0
 kozepsoY = 0
+kisX = 0
+kisy = 0
 
 mouse_x = 500
 mouse_y = 500
@@ -27,9 +29,9 @@ mouse_y = 500
 click_timer = 0
 
 cv2font = cv2.FONT_HERSHEY_SIMPLEX
-fontScale = 0.7
+fontScale = 0.5
 fontColor = (255, 0, 0)
-fontThickness = 2
+fontThickness = 1
 
 def get_video_capture_devices():
     index = 0
@@ -187,9 +189,23 @@ with mp_hands.Hands(
                         )
                         kozepsoX = x
                         kozepsoY = y
+                    # Kisujj
+                    if id == 20:
+                        cv2.circle(
+                            img=image,
+                            center=(x, y),
+                            radius=8,
+                            color=(80, 100, 240),
+                            thickness=8,
+                        )
+                        kisX = x
+                        kisY = y
 
             middle_Y_distance = ((huvelykY-kozepsoY)**2)**(0.5)//4
             middle_X_distance = ((huvelykX-kozepsoX)**2)**(0.5)//4
+
+            kis_Y_distance = ((kisY-huvelykY)**2)**(0.5)//4
+            kis_X_distance = ((kisX-huvelykX)**2)**(0.5)//4
 
             # vonal a középső gombhoz
             cv2.line(
@@ -201,13 +217,14 @@ with mp_hands.Hands(
             )
 
             # középsőujjtávolság kiírása
-            org = (kozepsoX+20, kozepsoY)
+            org_m = (kozepsoX+20, kozepsoY)
+            org_s = (kisX+20, kisY)
             if middle_Y_distance:
                 # középsőujj távolság
                 cv2.putText(
                     image,
                     "Y: " + str(middle_Y_distance) + ', X: ' + str(middle_X_distance),
-                    org,
+                    org_m,
                     cv2font,
                     fontScale,
                     fontColor,
@@ -220,18 +237,18 @@ with mp_hands.Hands(
                 # HANGERŐ ÁLLÍTÁSA
                 if pointer_Y_distance:
                     # hangerőtávolság
-                    org = (mutatoX + 20, mutatoY)
+                    org_p = (mutatoX + 20, mutatoY)
                     cv2.putText(
                         image,
                         "Y: " + str(pointer_Y_distance) + ', X: ' + str(pointer_X_distance),
-                        org,
+                        org_p,
                         cv2font,
                         fontScale,
                         fontColor,
                         fontThickness,
                         cv2.LINE_AA,
                     )
-                    if middle_X_distance < 15:
+                    if middle_X_distance < 15 and kis_X_distance < 30:
                         if middle_Y_distance > 30:
                             # vonal a hangerőcsík mutatására ZÖLD - változtatható
                             cv2.line(
@@ -251,8 +268,9 @@ with mp_hands.Hands(
                         else:
                             # EGÉR VEZÉRLÉSE
                             # kattintás egyszer
-                            if pointer_Y_distance < 5 and click_timer > 60:
+                            if pointer_Y_distance < 5 and click_timer > 40:
                                 pyautogui.click()
+                                print("SINGLE CLICK")
                                 click_timer = 0
                             # vonal a hangerőcsík mutatására KÉK - nem fog változni
                             cv2.line(
@@ -263,6 +281,32 @@ with mp_hands.Hands(
                                 thickness=5,
                             )
                             org = (mutatoX+20, mutatoY)
+                    if kis_Y_distance < 10 and kis_X_distance > 30:
+                        cv2.putText(
+                            image,
+                            "Y: " + str(kis_Y_distance) + ', X: ' + str(kis_X_distance),
+                            org_s,
+                            cv2font,
+                            fontScale,
+                            fontColor,
+                            fontThickness,
+                            cv2.LINE_AA,
+                        )
+                        # EGÉR VEZÉRLÉSE - DUPLAKATTINTÁS
+                        if click_timer > 40:
+                            pyautogui.click()
+                            time.sleep(0.2) # Sleep for 3 seconds
+                            pyautogui.click()
+                            print("DOUBLE CLICK")
+                            click_timer = 0
+                        cv2.line(
+                            image,
+                            (kisX, kisY),
+                            (huvelykX, huvelykY),
+                            color=(200, 0, 250),
+                            thickness=5,
+                        )
+                        org = (kisX+20, kisY)
 
 
         cv2.imshow("Project Ted Mosby", image)
